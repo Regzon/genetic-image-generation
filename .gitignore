@@ -8,3 +8,7 @@ venv/
 # Python cache
 __pycache__/
 *.py[cod]
+
+# Application output
+/images/*
+!/images/.gitkeep

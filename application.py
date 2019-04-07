@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np
 from random import randint, sample, choice, random
@@ -10,6 +11,20 @@ class CircleShape:
         self.radius = radius
         self.color = color
         self.opacity = opacity
+
+    @staticmethod
+    def random_center(max_x, max_y):
+        center_x = randint(0, max_x - 1)
+        center_y = randint(0, max_y - 1)
+        return (center_x, center_y)
+
+    @staticmethod
+    def random_radius():
+        pass
+
+    @staticmethod
+    def random_color():
+        pass
 
     @classmethod
     def generate(cls, max_x, max_y, radius_range):
@@ -26,17 +41,32 @@ class CircleShape:
         return cls(center, radius, color, opacity)
 
     def draw(self, image):
-        overlay = image.copy()
-        overlay = cv2.circle(overlay, self.center, self.radius, self.color, -1)
-        return cv2.addWeighted(
-            overlay, self.opacity,
-            image, 1 - self.opacity,
-            0
-        )
+        # min_x = max(self.center[0] - self.radius, 0)
+        # max_x = min(self.center[0] + self.radius, image.shape[1] - 1)
+        # min_y = max(self.center[1] - self.radius, 0)
+        # max_y = min(self.center[1] + self.radius, image.shape[0] - 1)
+        min_x = self.center[0] - self.radius
+        max_x = self.center[0] + self.radius
+        min_y = self.center[1] - self.radius
+        max_y = self.center[1] + self.radius
+
+        cutted_image = image[min_y:max_y, min_x:max_x]
+        overlay = cutted_image.copy()
+        cv2.circle(overlay, (self.radius, self.radius),
+                   self.radius, self.color, -1)
+        # Add circle to the initial image
+        image[min_y:max_y, min_x:max_x] = \
+            cv2.addWeighted(
+                overlay, self.opacity,
+                cutted_image, 1 - self.opacity, 0
+            )
 
     def copy(self):
         obj = self.__class__(
-            self.center, self.radius, self.color, self.opacity
+            center=self.center,
+            radius=self.radius,
+            color=self.color,
+            opacity=self.opacity,
         )
         return obj
 
@@ -88,7 +118,7 @@ class Individual:
 
     def draw_shapes(self):
         for shape in self.shapes:
-            self._image = shape.draw(self._image)
+            shape.draw(self._image)
 
     def copy(self):
         obj = self.__class__(
@@ -208,16 +238,22 @@ class Population:
             self.individuals.append(new_individual)
 
 
-def main():
-    image = cv2.imread('/home/andrew/image3.jpg').astype(np.int32)
+def main(image_path):
+    image = cv2.imread(image_path)
+    if image is None:
+        print("Can't open an image")
+        return
+    # Change image base type to support negative numbers
+    # (this is useful for finding the error)
+    image = image.astype(np.int32)
     population = Population(
         target_image=image,
-        population_size=2000,
+        population_size=500,
         mutations_percentage=0.6,
         crossingovers_percentage=0.3,
         individual_properties={
-            'shapes_range': (150, 200),
-            'radius_range': (1, 15),
+            'shapes_range': (100, 200),
+            'radius_range': (20, 100),
         }
     )
 
@@ -229,7 +265,7 @@ def main():
         population.drop_worst()
         population.evaluate_population()
 
-        if i % 5 == 0:
+        if i % 10 == 0:
             individual = max(
                 population.individuals,
                 key=lambda x: x.probability,
@@ -238,10 +274,19 @@ def main():
             print('Iteration: {}; Error: {}; Probability: {}'.format(
                 i, individual.error, individual.probability
             ))
-            cv2.imshow('image', individual.image.astype(np.uint8))
+            epoch_image = individual.image.astype(np.uint8)
+            _, image_name = os.path.split(image_path)
+            cv2.imwrite(f'images/epoch_{i}_{image_name}', epoch_image)
+            cv2.imshow('image', epoch_image)
             cv2.waitKey(delay=1)
     cv2.waitKey()
 
 
 if __name__ == '__main__':
-    main()
+    import sys
+    # Fetch command-line arguments
+    if (len(sys.argv) != 2):
+        print("Invalid arguments")
+        print(f"Usage: python3 {sys.argv[0]} <path-to-the-target-image>")
+    # Start the application with image_path argument
+    main(sys.argv[1])
