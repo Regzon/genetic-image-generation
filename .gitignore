@@ -1,5 +1,10 @@
 # Python environment
 venv/
 
-# VIM cache
+# VIM files
 .ropeproject/
+*.sw[op]
+
+# Python cache
+__pycache__/
+*.py[cod]
