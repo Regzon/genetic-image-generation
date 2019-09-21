@@ -245,15 +245,16 @@ def main(image_path):
         return
     # Change image base type to support negative numbers
     # (this is useful for finding the error)
+    image = cv2.resize(image, (256, 256))
     image = image.astype(np.int32)
     population = Population(
         target_image=image,
-        population_size=500,
-        mutations_percentage=0.6,
-        crossingovers_percentage=0.3,
+        population_size=200,
+        mutations_percentage=0.7,
+        crossingovers_percentage=0.2,
         individual_properties={
-            'shapes_range': (100, 200),
-            'radius_range': (20, 100),
+            'shapes_range': (100, 150),
+            'radius_range': (3, 90),
         }
     )
 
@@ -265,7 +266,7 @@ def main(image_path):
         population.drop_worst()
         population.evaluate_population()
 
-        if i % 10 == 0:
+        if i % 50 == 0:
             individual = max(
                 population.individuals,
                 key=lambda x: x.probability,
@@ -275,6 +276,7 @@ def main(image_path):
                 i, individual.error, individual.probability
             ))
             epoch_image = individual.image.astype(np.uint8)
+            epoch_image = cv2.resize(epoch_image, (512, 512))
             _, image_name = os.path.split(image_path)
             cv2.imwrite(f'images/epoch_{i}_{image_name}', epoch_image)
             cv2.imshow('image', epoch_image)
